@@ -1,46 +1,76 @@
 package com.coniungo.template.service;
 
-import com.coniungo.template.dto.User;
+import com.coniungo.template.dto.UserDTO;
+import com.coniungo.template.mapper.UserMapper;
+import com.coniungo.template.model.User;
+import com.coniungo.template.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
 
-    private final List<User> users = new ArrayList<>();
+    private final UserRepository userRepository;
 
-    // CREATE
-    public User addUser(User user) {
-        users.add(user);
-        return user;
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
-    // READ ALL
-    public List<User> getAllUsers() {
-        return users;
+    // Create a new user
+    public UserDTO createUser(UserDTO userDTO) {
+        User userEntity = UserMapper.toEntity(userDTO);
+        User savedUser = userRepository.save(userEntity);
+        return UserMapper.toDTO(savedUser);
     }
 
-    // READ BY ID
-    public Optional<User> getUserById(int id) {
-        return users.stream()
-                .filter(user -> user.getId() == id)
-                .findFirst();
+    // Create batch users
+    public List<UserDTO> createUsers(List<UserDTO> userDTOs) {
+        List<User> users = userDTOs.stream()
+                .map(UserMapper::toEntity)
+                .toList();
+        List<User> savedUsers = userRepository.saveAll(users);
+        return savedUsers.stream()
+                .map(UserMapper::toDTO)
+                .toList();
     }
 
-    // UPDATE
-    public boolean updateUser(int id, User newUser) {
-        return getUserById(id).map(existingUser -> {
-            users.remove(existingUser);
-            users.add(newUser);
-            return true;
-        }).orElse(false);
+    // Get a user by ID
+    public UserDTO getUserById(UUID id) {
+        return userRepository.findById(id)
+                .map(UserMapper::toDTO)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
     }
 
-    // DELETE
-    public boolean deleteUser(int id) {
-        return users.removeIf(user -> user.getId() == id);
+    // Get all users
+    public List<UserDTO> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(UserMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    // Update a user by ID
+    public UserDTO updateUser(UUID id, UserDTO userDTO) {
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
+
+        existingUser.setName(userDTO.getName());
+        User updatedUser = userRepository.save(existingUser);
+        return UserMapper.toDTO(updatedUser);
+    }
+
+    // Delete a user by ID
+    public void deleteUser(UUID id) {
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("User not found with ID: " + id);
+        }
+        userRepository.deleteById(id);
+    }
+
+    // Delete all users
+    public void deleteAllUsers() {
+        userRepository.deleteAll();
     }
 }
