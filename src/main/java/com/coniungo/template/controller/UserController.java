@@ -1,67 +1,84 @@
 package com.coniungo.template.controller;
 
-import com.coniungo.template.dto.User;
+import com.coniungo.template.dto.UserDTO;
 import com.coniungo.template.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    private HttpHeaders jsonHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return headers;
+    }
 
     // CREATE
     @PostMapping(produces = "application/json", consumes = "application/json")
-    public ResponseEntity<User> createUser(@RequestBody User user) {
-        return new ResponseEntity<>(user, HttpStatus.CREATED);
+    public ResponseEntity<UserDTO> createUser(@RequestBody UserDTO userDTO) {
+        UserDTO createdUser = userService.createUser(userDTO);
+        return new ResponseEntity<>(createdUser, jsonHeaders(), HttpStatus.CREATED);
     }
 
     // READ ALL
     @GetMapping(produces = "application/json")
-    public ResponseEntity<List<User>> getAllUsers() {
-        List<User> users = userService.getAllUsers();
-        return  new ResponseEntity<>(users, HttpStatus.OK);
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
+        List<UserDTO> users = userService.getAllUsers();
+        return new ResponseEntity<>(users, jsonHeaders(), HttpStatus.OK);
     }
 
     // READ BY ID
     @GetMapping(value = "/{id}", produces = "application/json")
-    public ResponseEntity<User> getUserById(@PathVariable int id) {
-        Optional<User> user = userService.getUserById(id);
-        return user.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
-                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    public ResponseEntity<Object> getUserById(@PathVariable UUID id) {
+        try {
+            UserDTO user = userService.getUserById(id);
+            return new ResponseEntity<>(user, jsonHeaders(), HttpStatus.OK);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, jsonHeaders(), HttpStatus.NOT_FOUND);
+        }
     }
 
     // UPDATE
     @PutMapping(value = "/{id}", produces = "application/json", consumes = "application/json")
-    public ResponseEntity<User> updateUser(@PathVariable int id, @RequestBody User newUser) {
-        boolean updated = userService.updateUser(id, newUser);
-        if (updated) {
-            return new ResponseEntity<>(newUser, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    public ResponseEntity<Object> updateUser(@PathVariable UUID id, @RequestBody UserDTO userDTO) {
+        try {
+            UserDTO updatedUser = userService.updateUser(id, userDTO);
+            return new ResponseEntity<>(updatedUser, jsonHeaders(), HttpStatus.OK);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, jsonHeaders(), HttpStatus.NOT_FOUND);
         }
     }
-
 
     // DELETE
     @DeleteMapping(value = "/{id}", produces = "application/json")
-    public ResponseEntity<Void> deleteUser(@PathVariable int id) {
-        boolean deleted = userService.deleteUser(id);
-        if (deleted) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    public ResponseEntity<Map<String, String>> deleteUser(@PathVariable UUID id) {
+        try {
+            userService.deleteUser(id);
+            Map<String, String> resp = new HashMap<>();
+            resp.put("message", "User deleted successfully");
+            return new ResponseEntity<>(resp, jsonHeaders(), HttpStatus.NO_CONTENT);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, jsonHeaders(), HttpStatus.NOT_FOUND);
         }
     }
-
-
-
 
 }

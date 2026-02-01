@@ -3,10 +3,13 @@ package com.coniungo.template.dto;
 
 import lombok.*;
 
+import java.util.UUID;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class User {
-    private int id;
-    private  String name;
+public class UserDTO {
+    private UUID id;
+    private String name;
+
 }

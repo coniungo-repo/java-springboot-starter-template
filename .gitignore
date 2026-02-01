@@ -32,6 +32,11 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+.env*.
+
+.env.json
+.env
+
 ### VS Code ###
 .vscode/
 
